@@ -1,0 +1,23 @@
+.responders-section {
+  margin-bottom: 32px;
+}
+
+.responders-section--bordered {
+  padding: 16px;
+  border: 1px solid var(--rd-brand-light);
+  border-radius: 4px;
+}
+
+.responders-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.responders-section__title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--rd-brand);
+}

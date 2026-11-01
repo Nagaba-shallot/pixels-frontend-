@@ -1,0 +1,26 @@
+.view-toggle {
+  display: inline-flex;
+  align-self: flex-start;
+  margin-bottom: 20px;
+  background: var(--rd-surface);
+  border-radius: 999px;
+}
+
+.view-toggle__option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--rd-text);
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-radius: 999px;
+}
+
+.view-toggle__option--active {
+  color: #fff;
+  background: var(--rd-brand);
+}

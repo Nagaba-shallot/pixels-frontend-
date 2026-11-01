@@ -1,0 +1,11 @@
+.responder-map {
+  z-index: 0;
+  flex: 1;
+  width: 100%;
+  min-height: 420px;
+  border-radius: 4px;
+}
+
+.responder-map .leaflet-popup-content {
+  font-family: var(--font-nunito), system-ui, sans-serif;
+}

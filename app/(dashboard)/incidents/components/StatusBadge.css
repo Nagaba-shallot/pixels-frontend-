@@ -1,0 +1,22 @@
+.status-badge {
+  display: inline-block;
+  padding: 2px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 999px;
+}
+
+.status-badge--triggered {
+  color: #c62828;
+  background: #ffd6d6;
+}
+
+.status-badge--acknowledged {
+  color: #8a5a00;
+  background: #fff0c2;
+}
+
+.status-badge--resolved {
+  color: #1b7a3c;
+  background: #d7f5e1;
+}
