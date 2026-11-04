@@ -6,8 +6,8 @@ import "leaflet/dist/leaflet.css";
 export const LAKE_VICTORIA = { center: [-1.3465, 36.7269], zoom: 19 };
 
 const MAX_BOUNDS = [
-  [-5.0, 33.0], 
-  [5.0, 42.0], 
+  [-5.0, 33.0],
+  [5.0, 42.0],
 ];
 
 const COLORS = { distress: "#e11d1d", nearby: "#16a34a", pending: "#f5b50a" };
@@ -32,7 +32,7 @@ export default function LakeMapInner({ markers = [], selectedId, onSelect }) {
       center: LAKE_VICTORIA.center,
       zoom: LAKE_VICTORIA.zoom,
       minZoom: 6,
-      maxZoom: 19, 
+      maxZoom: 19,
       maxBounds: MAX_BOUNDS,
       maxBoundsViscosity: 1.0,
       scrollWheelZoom: true,
@@ -40,7 +40,8 @@ export default function LakeMapInner({ markers = [], selectedId, onSelect }) {
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(map);
 
     mapRef.current = map;

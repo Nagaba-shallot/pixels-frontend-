@@ -7,4 +7,4 @@ export const STATUS_COLORS = {
 };
 
 export const MAP_CENTER = [-1.3465, 36.7269];
-export const MAP_ZOOM = 14; 
+export const MAP_ZOOM = 14;

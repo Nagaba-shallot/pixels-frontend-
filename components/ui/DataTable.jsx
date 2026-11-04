@@ -17,6 +17,7 @@ export default function DataTable({
   headerCellPaddingClassName = "px-6 py-4",
   cellPaddingClassName = "px-6 py-4",
   emptyCellPaddingClassName = "px-6 py-8",
+  rowClassName,
 }) {
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
@@ -67,22 +68,30 @@ export default function DataTable({
               </td>
             </tr>
           )}
-          {rows.map((row) => (
-            <tr key={row.id} className="border-b border-gray-500">
-              {row.getVisibleCells().map((cell) => (
-                <td
-                  key={cell.id}
-                  className={`${cellPaddingClassName} font-medium text-gray-900 ${
-                    cell.column.columnDef.meta?.center
-                      ? "text-center"
-                      : "text-left"
-                  }`}
-                >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {rows.map((row) => {
+            const customClass = rowClassName ? rowClassName(row.original) : "";
+            const isHighlighted = customClass.includes("bg-green-");
+
+            return (
+              <tr
+                key={row.id}
+                className="border-b border-gray-500 transition-colors duration-300"
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <td
+                    key={cell.id}
+                    className={`${cellPaddingClassName} font-medium text-gray-900 ${
+                      cell.column.columnDef.meta?.center
+                        ? "text-center"
+                        : "text-left"
+                    } ${isHighlighted ? "bg-green-100" : ""}`}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

@@ -77,6 +77,11 @@ export default function DashboardPage() {
           }, {});
 
         const activeAlerts = Object.values(activeAlertsMap);
+        const activeAlertFisherIds = new Set(
+          activeAlerts.map((a) => a.fisher_id),
+        );
+
+        const activeTrips = trips.filter((t) => t.status === "active");
 
         let totalResponders = 0;
         if (activeAlerts.length > 0) {
@@ -91,45 +96,11 @@ export default function DashboardPage() {
           totalResponders = uniqueIds.size;
         }
 
-        const activeTrips = trips.filter((t) => t.status === "active").length;
-
         setStats({
           incidents: activeAlerts.length,
-          trips: activeTrips,
+          trips: activeTrips.length,
           responders: totalResponders,
         });
-
-        let unmapped = 0;
-
-        const distressPins = activeAlerts
-          .map((alert) => {
-            const loc = rawLocations.find(
-              (l) => l.location_id === alert.location_id,
-            );
-
-            if (
-              !loc ||
-              loc.latitude == null ||
-              loc.longitude == null ||
-              loc.latitude < -90 ||
-              loc.latitude > 90 ||
-              loc.longitude < -180 ||
-              loc.longitude > 180
-            ) {
-              unmapped++;
-              return null;
-            }
-
-            return {
-              id: alert.alert_id,
-              type: "distress",
-              lat: loc.latitude,
-              lng: loc.longitude,
-              label: `Distressed: ${alert.fisher_id?.slice(0, 6)}`,
-              status: "Action",
-            };
-          })
-          .filter(Boolean);
 
         const latestLocationMap = rawLocations.reduce((acc, loc) => {
           const existing = acc[loc.fisher_id];
@@ -142,40 +113,60 @@ export default function DashboardPage() {
           return acc;
         }, {});
 
-        const latestLocations = Object.values(latestLocationMap);
+        let unmapped = 0;
+        const newMarkers = [];
 
-        const activeAlertFisherIds = new Set(
-          activeAlerts.map((a) => a.fisher_id),
-        );
+        activeAlerts.forEach((alert) => {
+          const loc = latestLocationMap[alert.fisher_id];
+          if (
+            loc &&
+            loc.latitude != null &&
+            loc.longitude != null &&
+            loc.latitude >= -90 &&
+            loc.latitude <= 90 &&
+            loc.longitude >= -180 &&
+            loc.longitude <= 180
+          ) {
+            newMarkers.push({
+              id: alert.alert_id,
+              type: "distress",
+              lat: loc.latitude,
+              lng: loc.longitude,
+              label: `Distressed: ${alert.fisher_id?.slice(0, 6)}`,
+              status: "Action",
+            });
+          } else {
+            unmapped++;
+          }
+        });
 
-        const safePins = latestLocations
-          .filter((loc) => !activeAlertFisherIds.has(loc.fisher_id))
-          .filter((loc) => {
-            const isValid =
+        activeTrips.forEach((trip) => {
+          if (!activeAlertFisherIds.has(trip.fisher_id)) {
+            const loc = latestLocationMap[trip.fisher_id];
+            if (
               loc &&
               loc.latitude != null &&
               loc.longitude != null &&
               loc.latitude >= -90 &&
               loc.latitude <= 90 &&
               loc.longitude >= -180 &&
-              loc.longitude <= 180;
-
-            if (!isValid) {
+              loc.longitude <= 180
+            ) {
+              newMarkers.push({
+                id: `safe-${trip.fisher_id}`,
+                type: "nearby",
+                lat: loc.latitude,
+                lng: loc.longitude,
+                label: `Checked In: ${trip.fisher_id?.slice(0, 6)}`,
+                status: "Safe",
+              });
+            } else {
               unmapped++;
-              return false;
             }
-            return true;
-          })
-          .map((loc) => ({
-            id: `safe-${loc.location_id}`,
-            type: "nearby",
-            lat: loc.latitude,
-            lng: loc.longitude,
-            label: `Fisher: ${loc.fisher_id?.slice(0, 6)}`,
-            status: "Safe",
-          }));
+          }
+        });
 
-        setMarkers([...distressPins, ...safePins]);
+        setMarkers(newMarkers);
         setUnmappedCount(unmapped);
       } catch (err) {
         console.error("Dashboard data error:", err);
@@ -204,8 +195,8 @@ export default function DashboardPage() {
 
       {unmappedCount > 0 && (
         <div className="mb-4 rounded bg-yellow-50 p-3 text-sm text-yellow-700 border border-yellow-200">
-          {unmappedCount} alert(s) could not be mapped because their locations
-          are missing or invalid.
+          {unmappedCount} fisher(s) are on the lake but haven&apos;t sent GPS
+          data yet.
         </div>
       )}
 

@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getActiveIncidents } from "../lib/api";
+import { api } from "@/lib/api";
 import { POLL_INTERVAL_MS } from "../lib/constants";
-import { describeError } from "../lib/errors";
 
 export function useIncidents() {
   const [incidents, setIncidents] = useState([]);
@@ -16,21 +15,47 @@ export function useIncidents() {
 
     async function load() {
       try {
-        const next = await getActiveIncidents();
+        const alerts = await api.getAllAlerts();
+
         if (isCancelled) return;
-        setIncidents(next);
+
+        const todayStr = new Date().toDateString();
+
+        const formatted = alerts
+          .filter((alert) => {
+            // Only show alerts triggered today
+            if (!alert.triggered_at) return false;
+            const alertDate = new Date(alert.triggered_at).toDateString();
+            return alertDate === todayStr;
+          })
+          .map((alert) => {
+            // The backend sends 'triggered', 'acknowledged', or 'resolved'
+            return {
+              id: alert.alert_id,
+              displayId: alert.alert_id.slice(0, 8).toUpperCase(),
+              latitude: alert.latitude,
+              longitude: alert.longitude,
+              status: alert.status,
+              triggeredAt: alert.triggered_at,
+              fisherId: alert.fisher_id,
+              fisherCount: alert.number_of_fishers || 1,
+            };
+          });
+
+        setIncidents(formatted);
         setError(null);
         setUpdatedAt(Date.now());
-      } catch (caught) {
+      } catch {
         if (isCancelled) return;
-        setError(describeError("incidents", caught));
+        setError("Failed to load live incidents.");
       } finally {
         if (!isCancelled) setIsLoading(false);
       }
     }
 
     load();
-    const timer = setInterval(load, POLL_INTERVAL_MS);
+    const timer = setInterval(load, POLL_INTERVAL_MS || 2000);
+
     return () => {
       isCancelled = true;
       clearInterval(timer);
