@@ -138,7 +138,7 @@ function WristbandsContent() {
     };
 
     loadData(true);
-    const interval = setInterval(() => loadData(false), 3000);
+    const interval = setInterval(() => loadData(false), 2000);
 
     return () => {
       alive = false;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { getResponders } from "../lib/api";
 
 function describeError(label, error) {
@@ -18,6 +18,7 @@ export function useResponderData() {
   const [errors, setErrors] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
+  const inFlightRef = useRef(false);
 
   const retry = useCallback(() => {
     setIsLoading(true);
@@ -26,19 +27,31 @@ export function useResponderData() {
   }, []);
 
   useEffect(() => {
+    const intervalId = setInterval(() => {
+      if (inFlightRef.current) return;
+      setRetryCount((c) => c + 1);
+    }, 2000);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
     let isCancelled = false;
+    inFlightRef.current = true;
 
     getResponders()
       .then((result) => {
         if (isCancelled) return;
         setResponders(result);
         setErrors([]);
-        setIsLoading(false);
       })
       .catch((error) => {
         if (isCancelled) return;
         setErrors([describeError("responders", error)]);
-        setIsLoading(false);
+      })
+      .finally(() => {
+        inFlightRef.current = false;
+        if (!isCancelled) setIsLoading(false);
       });
 
     return () => {

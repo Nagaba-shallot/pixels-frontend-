@@ -1,0 +1,53 @@
+name: PR Ready Check
+
+on:
+  pull_request:
+    types:
+      [
+        opened,
+        edited,
+        reopened,
+        synchronize,
+        ready_for_review,
+        converted_to_draft,
+      ]
+
+jobs:
+  ready-checklist:
+    name: Ready for Review checklist
+    runs-on: [self-hosted, classroom-ci]
+    steps:
+      - name: Verify checklist is complete before review
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+
+            if (pr.draft) {
+              core.info('PR is still a draft, skipping checklist check.');
+              return;
+            }
+
+            const body = pr.body || '';
+            const match = body.match(/## Ready for Review([\s\S]*?)(\n#{1,2} |$)/);
+
+            if (!match) {
+              core.setFailed('The "Ready for Review" section is missing from the PR description. Please use the PR template.');
+              return;
+            }
+
+            const unchecked = match[1]
+              .split('\n')
+              .filter((line) => /^\s*[-*] \[ \]/.test(line))
+              .map((line) => line.replace(/^\s*[-*] \[ \]\s*/, ''));
+
+            if (unchecked.length > 0) {
+              core.setFailed(
+                'This PR was marked as ready for review, but these items are not done yet:\n' +
+                unchecked.map((item) => `  - ${item}`).join('\n') +
+                '\n\nComplete them (or convert the PR back to draft) before requesting review.'
+              );
+              return;
+            }
+
+            core.info('All Ready for Review items are checked.');
