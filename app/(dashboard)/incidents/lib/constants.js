@@ -7,4 +7,4 @@ export const INCIDENT_STATUS = {
 export const MAP_CENTER = [-1.3465, 36.7269];
 export const MAP_ZOOM = 14;
 
-export const POLL_INTERVAL_MS = 2_000;
+export const POLL_INTERVAL_MS = 1_000;
