@@ -67,7 +67,8 @@ export default function DashboardPage() {
   const [markers, setMarkers] = useState([]);
   const [unmappedCount, setUnmappedCount] = useState(0);
   const [isMounted, setIsMounted] = useState(false);
-  const handledRef = useRef(new Set());
+  const resolvingRef = useRef(new Set());
+  const resolvedRef = useRef(new Set());
 
   useEffect(() => {
     const timer = setTimeout(() => setIsMounted(true), 0);
@@ -83,8 +84,8 @@ export default function DashboardPage() {
 
     function autoResolve(alert, responder) {
       const id = alert.alert_id;
-      if (handledRef.current.has(id)) return;
-      handledRef.current.add(id);
+      if (resolvingRef.current.has(id) || resolvedRef.current.has(id)) return;
+      resolvingRef.current.add(id);
 
       (async () => {
         try {
@@ -97,9 +98,16 @@ export default function DashboardPage() {
             await api.acknowledgeAlert(id).catch(ignoreConflict);
           }
           await api.resolveAlert(id).catch(ignoreConflict);
+
+          const fresh = await api.getAlert(id);
+          if (!fresh?.resolved_at) {
+            throw new Error("The server did not confirm the resolution.");
+          }
+          resolvedRef.current.add(id);
         } catch (err) {
           console.error("Could not resolve alert:", err);
-          handledRef.current.delete(id);
+        } finally {
+          resolvingRef.current.delete(id);
         }
       })();
     }
@@ -122,7 +130,7 @@ export default function DashboardPage() {
           locationsRes.status === "fulfilled" ? locationsRes.value : [];
 
         const activeAlertsMap = alerts
-          .filter((a) => !a.resolved_at && !handledRef.current.has(a.alert_id))
+          .filter((a) => !a.resolved_at && !resolvedRef.current.has(a.alert_id))
           .reduce((acc, alert) => {
             const existing = acc[alert.fisher_id];
             if (
@@ -134,8 +142,8 @@ export default function DashboardPage() {
             return acc;
           }, {});
 
-        let activeAlerts = Object.values(activeAlertsMap);
-        let activeAlertFisherIds = new Set(
+        const activeAlerts = Object.values(activeAlertsMap);
+        const activeAlertFisherIds = new Set(
           activeAlerts.map((a) => a.fisher_id),
         );
 
@@ -161,25 +169,15 @@ export default function DashboardPage() {
             }
           });
 
-          const stillActive = [];
-          const stillActiveResponders = [];
           activeAlerts.forEach((alert, i) => {
-            const responders = respondersArray[i] || [];
-            const arrived = responders.find((r) =>
+            const arrived = (respondersArray[i] || []).find((r) =>
               hasArrived(r, alert, latestByFisher),
             );
-            if (arrived) {
-              autoResolve(alert, arrived);
-            } else {
-              stillActive.push(alert);
-              stillActiveResponders.push(...responders);
-            }
+            if (arrived) autoResolve(alert, arrived);
           });
 
-          activeAlerts = stillActive;
-          activeAlertFisherIds = new Set(activeAlerts.map((a) => a.fisher_id));
           totalResponders = new Set(
-            stillActiveResponders.map((r) => r.responder_fisher_id),
+            respondersArray.flat().map((r) => r.responder_fisher_id),
           ).size;
         }
 

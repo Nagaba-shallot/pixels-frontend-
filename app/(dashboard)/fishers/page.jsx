@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { CreateFisherForm, FisherDetails } from "@/components/FisherPanels";
 import { Button, Panel, DataTable, Modal } from "@/components/ui";
-import { api } from "@/lib/api";
+import { api, mergeTrips } from "@/lib/api";
 
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -150,11 +150,12 @@ function FishersContent() {
     setPanel({ details: fisher, loading: true });
     try {
       const full = await api.getFisher(fisher.fisher_id);
+      const trips = mergeTrips(fisher.trips, full.trips);
       setPanel((prev) =>
         prev &&
         prev !== "create" &&
         prev.details?.fisher_id === fisher.fisher_id
-          ? { details: { ...fisher, ...full }, loading: false }
+          ? { details: { ...fisher, ...full, trips }, loading: false }
           : prev,
       );
     } catch {

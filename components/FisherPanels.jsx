@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Field, Button } from "@/components/ui";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import Image from "next/image";
+import { normalizeTrip } from "@/lib/api";
 
 export function CreateFisherForm({ onCreated }) {
   const [error, setError] = useState("");
@@ -72,7 +73,9 @@ export function FisherDetails({ details = {}, isLoading = false }) {
 
   const byNewest = (field) => (a, b) =>
     (Date.parse(b[field]) || 0) - (Date.parse(a[field]) || 0);
-  const trips = [...(d.trips || [])].sort(byNewest("check_in_time"));
+  const trips = (d.trips || [])
+    .map(normalizeTrip)
+    .sort(byNewest("check_in_time"));
   const sosAlerts = [...(d.sos_alerts || [])].sort(byNewest("created_at"));
 
   const latestTrip = trips.length > 0 ? trips[0] : {};
