@@ -73,7 +73,7 @@ function FishersContent() {
   const [toastMsg, setToastMsg] = useState("");
   const [selectedDate, setSelectedDate] = useState(null);
   const [openDropdown, setOpenDropdown] = useState(null);
-  const [isPairing, setIsPairing] = useState(false);
+  const [pairingFisherId, setPairingFisherId] = useState(null);
   const headerDropdownRef = useRef(null);
 
   useEffect(() => {
@@ -106,7 +106,7 @@ function FishersContent() {
 
   const loadFishers = useCallback(async () => {
     try {
-      const data = await api.getAllFishers();
+      const data = await api.getAllFishersWithTrips();
       setFishers(data);
       setError(null);
     } catch {
@@ -146,15 +146,33 @@ function FishersContent() {
     }
   }
 
+  async function openFisherDetails(fisher) {
+    setPanel({ details: fisher, loading: true });
+    try {
+      const full = await api.getFisher(fisher.fisher_id);
+      setPanel((prev) =>
+        prev &&
+        prev !== "create" &&
+        prev.details?.fisher_id === fisher.fisher_id
+          ? { details: { ...fisher, ...full }, loading: false }
+          : prev,
+      );
+    } catch {
+      setPanel((prev) =>
+        prev && prev !== "create" ? { ...prev, loading: false } : prev,
+      );
+    }
+  }
+
   async function handlePairFisher(fisherId) {
-    if (!pairWristbandId) return;
-    setIsPairing(true);
+    if (!pairWristbandId || pairingFisherId) return;
+    setPairingFisherId(fisherId);
     try {
       await api.assignWristband(pairWristbandId, fisherId);
       router.push("/wristbands");
     } catch (err) {
       alert("Failed to assign wristband: " + (err.message || "Unknown error"));
-      setIsPairing(false);
+      setPairingFisherId(null);
     }
   }
 
@@ -207,18 +225,19 @@ function FishersContent() {
       render: (r) => {
         if (pairWristbandId) {
           const isCurrentlyPairedHere = r.rfid_id === pairRfidTag;
+          const isPairingThis = pairingFisherId === r.fisher_id;
 
           return (
             <button
               onClick={() => handlePairFisher(r.fisher_id)}
-              disabled={isPairing || isCurrentlyPairedHere}
+              disabled={Boolean(pairingFisherId) || isCurrentlyPairedHere}
               className={`rounded-md px-4 py-1 text-xs font-semibold text-white transition-colors ${
                 isCurrentlyPairedHere
                   ? "bg-gray-400 cursor-not-allowed"
                   : "bg-[#008B8B] hover:bg-[#007373]"
               }`}
             >
-              {isPairing
+              {isPairingThis
                 ? "Pairing..."
                 : isCurrentlyPairedHere
                   ? "Paired Here"
@@ -231,7 +250,7 @@ function FishersContent() {
           return (
             <div className="flex items-center gap-3">
               <button
-                onClick={() => setPanel({ details: r })}
+                onClick={() => openFisherDetails(r)}
                 className="text-[#008B8B] font-semibold hover:underline text-xs"
               >
                 View
@@ -245,7 +264,7 @@ function FishersContent() {
 
         return (
           <button
-            onClick={() => setPanel({ details: r })}
+            onClick={() => openFisherDetails(r)}
             className="text-[#008B8B] font-semibold hover:underline text-xs"
           >
             View
@@ -710,6 +729,7 @@ function FishersContent() {
         ) : (
           <FisherDetails
             details={panel?.details}
+            isLoading={Boolean(panel?.loading)}
             onClose={() => setPanel(null)}
           />
         )}

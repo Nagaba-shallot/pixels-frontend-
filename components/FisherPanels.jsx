@@ -70,8 +70,10 @@ export function FisherDetails({ details = {}, isLoading = false }) {
     });
   };
 
-  const trips = d.trips || [];
-  const sosAlerts = d.sos_alerts || [];
+  const byNewest = (field) => (a, b) =>
+    (Date.parse(b[field]) || 0) - (Date.parse(a[field]) || 0);
+  const trips = [...(d.trips || [])].sort(byNewest("check_in_time"));
+  const sosAlerts = [...(d.sos_alerts || [])].sort(byNewest("created_at"));
 
   const latestTrip = trips.length > 0 ? trips[0] : {};
   const latestSOS = sosAlerts.length > 0 ? sosAlerts[0] : {};

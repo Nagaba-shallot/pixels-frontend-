@@ -41,7 +41,7 @@ function ignoreConflict(err) {
 
 function Stat({ iconSrc, value, title, note, tone }) {
   return (
-    <div className={`flex items-center gap-4 rounded-lg p-5 ${tone}`}>
+    <div className={`flex min-w-0 items-center gap-4 rounded-lg p-5 ${tone}`}>
       <Image
         src={iconSrc}
         alt={title}
@@ -49,13 +49,13 @@ function Stat({ iconSrc, value, title, note, tone }) {
         height={40}
         className="h-10 w-10 shrink-0 object-contain"
       />
-      <div className="flex min-w-0 flex-row items-center gap-3">
+      <div className="flex min-w-0 flex-1 flex-row items-center gap-3">
         <span className="text-3xl md:text-4xl text-black font-semibold">
           {value}
         </span>
-        <div className="flex flex-col text-black">
-          <p className="font-semibold truncate">{title}</p>
-          <p className="text-sm truncate">{note}</p>
+        <div className="flex min-w-0 flex-col text-black">
+          <p className="font-semibold leading-tight break-words">{title}</p>
+          <p className="text-sm leading-snug break-words">{note}</p>
         </div>
       </div>
     </div>
@@ -99,7 +99,7 @@ export default function DashboardPage() {
           await api.resolveAlert(id).catch(ignoreConflict);
         } catch (err) {
           console.error("Could not resolve alert:", err);
-          handledRef.current.delete(id); 
+          handledRef.current.delete(id);
         }
       })();
     }
@@ -135,7 +135,9 @@ export default function DashboardPage() {
           }, {});
 
         let activeAlerts = Object.values(activeAlertsMap);
-        let activeAlertFisherIds = new Set(activeAlerts.map((a) => a.fisher_id));
+        let activeAlertFisherIds = new Set(
+          activeAlerts.map((a) => a.fisher_id),
+        );
 
         const activeTrips = trips.filter((t) => t.status === "active");
 
@@ -285,7 +287,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <Stat
           iconSrc="/incident.svg"
           tone="bg-red-50"
