@@ -1,9 +1,43 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import PageHeader from "@/components/PageHeader";
 import LakeMap from "@/components/LakeMap";
 import { api } from "@/lib/api";
+
+const ARRIVAL_RADIUS_M = 100;
+
+function distanceMeters(lat1, lon1, lat2, lon2) {
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * 6371000 * Math.asin(Math.sqrt(a));
+}
+
+function hasArrived(responder, alert, latestByFisher) {
+  if (responder.arrived_at) return true;
+  const victim = latestByFisher[alert.fisher_id];
+  const rescuer = latestByFisher[responder.responder_fisher_id];
+  if (!victim || !rescuer) return false;
+  if (Date.parse(rescuer.recorded_at) < Date.parse(responder.received_at)) {
+    return false;
+  }
+  return (
+    distanceMeters(
+      rescuer.latitude,
+      rescuer.longitude,
+      victim.latitude,
+      victim.longitude,
+    ) <= ARRIVAL_RADIUS_M
+  );
+}
+
+function ignoreConflict(err) {
+  if (err?.status !== 409) throw err;
+}
 
 function Stat({ iconSrc, value, title, note, tone }) {
   return (
@@ -33,6 +67,7 @@ export default function DashboardPage() {
   const [markers, setMarkers] = useState([]);
   const [unmappedCount, setUnmappedCount] = useState(0);
   const [isMounted, setIsMounted] = useState(false);
+  const handledRef = useRef(new Set());
 
   useEffect(() => {
     const timer = setTimeout(() => setIsMounted(true), 0);
@@ -45,6 +80,29 @@ export default function DashboardPage() {
   useEffect(() => {
     let isCancelled = false;
     let timeoutId;
+
+    function autoResolve(alert, responder) {
+      const id = alert.alert_id;
+      if (handledRef.current.has(id)) return;
+      handledRef.current.add(id);
+
+      (async () => {
+        try {
+          if (!responder.arrived_at) {
+            await api
+              .markResponderArrived(responder.alert_responder_id)
+              .catch(ignoreConflict);
+          }
+          if (!alert.acknowledged_at) {
+            await api.acknowledgeAlert(id).catch(ignoreConflict);
+          }
+          await api.resolveAlert(id).catch(ignoreConflict);
+        } catch (err) {
+          console.error("Could not resolve alert:", err);
+          handledRef.current.delete(id); 
+        }
+      })();
+    }
 
     async function loadData() {
       if (isCancelled) return;
@@ -64,7 +122,7 @@ export default function DashboardPage() {
           locationsRes.status === "fulfilled" ? locationsRes.value : [];
 
         const activeAlertsMap = alerts
-          .filter((a) => !a.resolved_at)
+          .filter((a) => !a.resolved_at && !handledRef.current.has(a.alert_id))
           .reduce((acc, alert) => {
             const existing = acc[alert.fisher_id];
             if (
@@ -76,24 +134,51 @@ export default function DashboardPage() {
             return acc;
           }, {});
 
-        const activeAlerts = Object.values(activeAlertsMap);
-        const activeAlertFisherIds = new Set(
-          activeAlerts.map((a) => a.fisher_id),
-        );
+        let activeAlerts = Object.values(activeAlertsMap);
+        let activeAlertFisherIds = new Set(activeAlerts.map((a) => a.fisher_id));
 
         const activeTrips = trips.filter((t) => t.status === "active");
 
         let totalResponders = 0;
         if (activeAlerts.length > 0) {
-          const responderPromises = activeAlerts.map((alert) =>
-            api.getRespondersByAlert(alert.alert_id).catch(() => []),
+          const respondersArray = await Promise.all(
+            activeAlerts.map((alert) =>
+              api.getRespondersByAlert(alert.alert_id).catch(() => []),
+            ),
           );
-          const respondersArray = await Promise.all(responderPromises);
-          const uniqueIds = new Set();
-          respondersArray
-            .flat()
-            .forEach((r) => uniqueIds.add(r.responder_fisher_id));
-          totalResponders = uniqueIds.size;
+          if (isCancelled) return;
+
+          const latestByFisher = {};
+          rawLocations.forEach((loc) => {
+            const existing = latestByFisher[loc.fisher_id];
+            if (
+              !existing ||
+              new Date(loc.recorded_at) > new Date(existing.recorded_at)
+            ) {
+              latestByFisher[loc.fisher_id] = loc;
+            }
+          });
+
+          const stillActive = [];
+          const stillActiveResponders = [];
+          activeAlerts.forEach((alert, i) => {
+            const responders = respondersArray[i] || [];
+            const arrived = responders.find((r) =>
+              hasArrived(r, alert, latestByFisher),
+            );
+            if (arrived) {
+              autoResolve(alert, arrived);
+            } else {
+              stillActive.push(alert);
+              stillActiveResponders.push(...responders);
+            }
+          });
+
+          activeAlerts = stillActive;
+          activeAlertFisherIds = new Set(activeAlerts.map((a) => a.fisher_id));
+          totalResponders = new Set(
+            stillActiveResponders.map((r) => r.responder_fisher_id),
+          ).size;
         }
 
         setStats({
