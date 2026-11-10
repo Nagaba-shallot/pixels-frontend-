@@ -30,8 +30,13 @@ export function useResponderData() {
     let timeoutId;
 
     async function load() {
+      const fetchPromise = getResponders();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Server took too long to respond.")), 8000)
+      );
+
       try {
-        const result = await getResponders();
+        const result = await Promise.race([fetchPromise, timeoutPromise]);
         if (isCancelled) return;
         setResponders(result);
         setErrors([]);
