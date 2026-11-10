@@ -7,6 +7,8 @@ import { api } from "@/lib/api";
 
 const ARRIVAL_RADIUS_M = 100;
 
+const roundCoord = (num) => Math.round(num * 10000) / 10000;
+
 function distanceMeters(lat1, lon1, lat2, lon2) {
   const toRad = (d) => (d * Math.PI) / 180;
   const dLat = toRad(lat2 - lat1);
@@ -215,8 +217,8 @@ export default function DashboardPage() {
             newMarkers.push({
               id: alert.alert_id,
               type: "distress",
-              lat: loc.latitude,
-              lng: loc.longitude,
+              lat: roundCoord(loc.latitude),
+              lng: roundCoord(loc.longitude),
               label: `Distressed: ${alert.fisher_id?.slice(0, 6)}`,
               status: "Action",
             });
@@ -240,8 +242,8 @@ export default function DashboardPage() {
               newMarkers.push({
                 id: `safe-${trip.fisher_id}`,
                 type: "nearby",
-                lat: loc.latitude,
-                lng: loc.longitude,
+                lat: roundCoord(loc.latitude),
+                lng: roundCoord(loc.longitude),
                 label: `Checked In: ${trip.fisher_id?.slice(0, 6)}`,
                 status: "Safe",
               });

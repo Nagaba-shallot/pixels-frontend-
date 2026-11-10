@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-export const LAKE_VICTORIA = { center: [-1.3465, 36.7269], zoom: 19 };
+export const LAKE_VICTORIA = { center: [-1.3465, 36.7269], zoom: 17 };
 
 const MAX_BOUNDS = [
   [-5.0, 33.0],
