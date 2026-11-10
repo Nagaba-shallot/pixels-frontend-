@@ -46,7 +46,7 @@ export function useResponderData() {
       } finally {
         if (!isCancelled) {
           setIsLoading(false);
-          timeoutId = setTimeout(load, 2000);
+          timeoutId = setTimeout(load, 8000);
         }
       }
     }

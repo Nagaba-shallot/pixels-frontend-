@@ -138,7 +138,7 @@ export default function ReportsPage() {
       try {
         const fetchPromise = api.getReports();
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Server took too long to respond.")), 2000)
+          setTimeout(() => reject(new Error("Server took too long to respond.")), 5000)
         );
 
         const records = await Promise.race([fetchPromise, timeoutPromise]);
