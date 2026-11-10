@@ -68,41 +68,20 @@ function WristbandsContent() {
 
   useEffect(() => {
     let alive = true;
+    let isFirstLoad = true;
 
     const loadData = async (showSpinner = false) => {
       if (showSpinner) setIsLoading(true);
       try {
-        const [wristbandsResult, fishersResult, scanResult] =
-          await Promise.allSettled([
-            api.getAllWristbands(),
-            api.getAllFishers(),
-            api.getLastScan(),
-          ]);
+        const scanResult = await api.getLastScan().catch(() => null);
 
         if (!alive) return;
 
-        let hasError = false;
+        let newScanDetected = false;
 
-        if (wristbandsResult.status === "fulfilled") {
-          setRegistered(wristbandsResult.value);
-        } else {
-          hasError = true;
-        }
-
-        if (fishersResult.status === "fulfilled") {
-          setFishers(fishersResult.value);
-        } else {
-          hasError = true;
-        }
-
-        if (scanResult.status === "rejected") {
-          hasError = true;
-        } else if (
-          scanResult.status === "fulfilled" &&
-          scanResult.value?.rfid_tag
-        ) {
-          const newTag = scanResult.value.rfid_tag;
-          const newTimestamp = scanResult.value.timestamp;
+        if (scanResult?.rfid_tag) {
+          const newTag = scanResult.rfid_tag;
+          const newTimestamp = scanResult.timestamp;
           const scanSignature = newTimestamp
             ? `${newTag}-${newTimestamp}`
             : newTag;
@@ -111,6 +90,7 @@ function WristbandsContent() {
             previousScannedRef.current = scanSignature;
             setLastScanned(newTag);
             setHighlightedTag(newTag);
+            newScanDetected = true;
 
             if (highlightTimeoutRef.current)
               clearTimeout(highlightTimeoutRef.current);
@@ -119,15 +99,24 @@ function WristbandsContent() {
               if (alive) setHighlightedTag(null);
             }, 10000);
           }
-        } else {
-          setLastScanned(null);
         }
 
-        if (hasError) {
-          setLoadError(
-            "Failed to load live data. Please check the IoT connection.",
-          );
-        } else {
+        if (isFirstLoad || newScanDetected) {
+          const [wristbandsResult, fishersResult] = await Promise.allSettled([
+            api.getAllWristbands(),
+            api.getAllFishers(),
+          ]);
+
+          if (!alive) return;
+
+          if (wristbandsResult.status === "fulfilled") {
+            setRegistered(wristbandsResult.value);
+          }
+          if (fishersResult.status === "fulfilled") {
+            setFishers(fishersResult.value);
+          }
+
+          isFirstLoad = false;
           setLoadError("");
         }
       } catch {
@@ -138,7 +127,7 @@ function WristbandsContent() {
     };
 
     loadData(true);
-    const interval = setInterval(() => loadData(false), 1000);
+    const interval = setInterval(() => loadData(false), 3000);
 
     return () => {
       alive = false;
