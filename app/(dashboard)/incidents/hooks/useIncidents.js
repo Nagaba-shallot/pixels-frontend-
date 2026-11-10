@@ -19,17 +19,11 @@ export function useIncidents() {
 
         if (isCancelled) return;
 
-        const todayStr = new Date().toDateString();
-
         const formatted = alerts
           .filter((alert) => {
-            // Only show alerts triggered today
-            if (!alert.triggered_at) return false;
-            const alertDate = new Date(alert.triggered_at).toDateString();
-            return alertDate === todayStr;
+            return !alert.resolved_at;
           })
           .map((alert) => {
-            // The backend sends 'triggered', 'acknowledged', or 'resolved'
             return {
               id: alert.alert_id,
               displayId: alert.alert_id.slice(0, 8).toUpperCase(),
@@ -45,9 +39,10 @@ export function useIncidents() {
         setIncidents(formatted);
         setError(null);
         setUpdatedAt(Date.now());
-      } catch {
+      } catch (err) {
         if (isCancelled) return;
         setError("Failed to load live incidents.");
+        console.error("Incidents load error:", err);
       } finally {
         if (!isCancelled) setIsLoading(false);
       }
