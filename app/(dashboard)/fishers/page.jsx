@@ -173,6 +173,7 @@ function FishersContent() {
       router.push("/wristbands");
     } catch (err) {
       alert("Failed to assign wristband: " + (err.message || "Unknown error"));
+    } finally {
       setPairingFisherId(null);
     }
   }

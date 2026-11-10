@@ -27,22 +27,30 @@ export function useResponderData() {
 
   useEffect(() => {
     let isCancelled = false;
+    let timeoutId;
 
-    getResponders()
-      .then((result) => {
+    async function load() {
+      try {
+        const result = await getResponders();
         if (isCancelled) return;
         setResponders(result);
         setErrors([]);
-        setIsLoading(false);
-      })
-      .catch((error) => {
+      } catch (error) {
         if (isCancelled) return;
         setErrors([describeError("responders", error)]);
-        setIsLoading(false);
-      });
+      } finally {
+        if (!isCancelled) {
+          setIsLoading(false);
+          timeoutId = setTimeout(load, 2000);
+        }
+      }
+    }
+
+    load();
 
     return () => {
       isCancelled = true;
+      clearTimeout(timeoutId);
     };
   }, [retryCount]);
 
