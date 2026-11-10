@@ -27,35 +27,22 @@ export function useResponderData() {
 
   useEffect(() => {
     let isCancelled = false;
-    let timeoutId;
 
-    async function load() {
-      const fetchPromise = getResponders();
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Server took too long to respond.")), 8000)
-      );
-
-      try {
-        const result = await Promise.race([fetchPromise, timeoutPromise]);
+    getResponders()
+      .then((result) => {
         if (isCancelled) return;
         setResponders(result);
         setErrors([]);
-      } catch (error) {
+        setIsLoading(false);
+      })
+      .catch((error) => {
         if (isCancelled) return;
         setErrors([describeError("responders", error)]);
-      } finally {
-        if (!isCancelled) {
-          setIsLoading(false);
-          timeoutId = setTimeout(load, 8000);
-        }
-      }
-    }
-
-    load();
+        setIsLoading(false);
+      });
 
     return () => {
       isCancelled = true;
-      clearTimeout(timeoutId);
     };
   }, [retryCount]);
 
