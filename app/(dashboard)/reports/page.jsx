@@ -136,12 +136,7 @@ export default function ReportsPage() {
       setCurrentMonth(new Date());
 
       try {
-        const fetchPromise = api.getReports();
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Server took too long to respond.")), 5000)
-        );
-
-        const records = await Promise.race([fetchPromise, timeoutPromise]);
+        const records = await api.getReports();
 
         if (!Array.isArray(records)) {
           throw new Error("The reports API returned an unexpected response.");
