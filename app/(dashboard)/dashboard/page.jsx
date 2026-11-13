@@ -257,7 +257,7 @@ export default function DashboardPage() {
         console.error("Dashboard data error:", err);
       } finally {
         if (!isCancelled) {
-          timeoutId = setTimeout(loadData, 1000);
+          timeoutId = setTimeout(loadData, 100);
         }
       }
     }
