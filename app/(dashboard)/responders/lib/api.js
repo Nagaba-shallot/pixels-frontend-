@@ -1,19 +1,9 @@
 import { api } from "@/lib/api";
 
 async function getAllLocations() {
-  const records = [];
-  let skip = 0;
-  const limit = 500;
-
-  while (true) {
-    const page = await api.getLocations(skip, limit);
-    if (!Array.isArray(page)) break;
-
-    records.push(...page);
-    if (page.length < limit) break;
-    skip += limit;
-  }
-  return records;
+  const page = await api.getLocations(0, 50);
+  if (!Array.isArray(page)) return [];
+  return page;
 }
 
 function toResponder(record, fisher, location) {
